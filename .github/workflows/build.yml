@@ -50,6 +50,7 @@ jobs:
     - name: Compile kernel
       run: |
         cd ~/a20s-lineage/kernel/$DEVICE
+        make oldconfig
         make O=out ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j$THREADS \
             Image.gz dtbs
 
