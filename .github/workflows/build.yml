@@ -33,6 +33,10 @@ jobs:
       run: |
         git clone --depth=1 https://github.com/GUGU-ROMS/android_kernel_samsung_a20sxx_old.git kernel
 
+    - name: Link Python 2 (installed)
+      run: |
+        sudo ln -sf /usr/bin/python2 /usr/bin/python
+
     - name: Build kernel
       run: |
         cd kernel
@@ -63,10 +67,6 @@ jobs:
 
         cp kernel/out/arch/arm64/boot/dtbo.img output/
 
-    - name: Link Python 2 (installed)
-      run: |
-        sudo ln -sf /usr/bin/python2 /usr/bin/python
-
     - name: Create ramdisk
       run: |
         mkdir ramdisk
@@ -95,7 +95,8 @@ jobs:
 
     - name: Create flashable ZIP
       run: |
-        mkdir -p flash/META-INF/com/google/android
+        mkdir -p flash/META-INF/com/google/androi
+        
 
         cp output/boot.img flash/
         cp output/dtbo.img flash/
