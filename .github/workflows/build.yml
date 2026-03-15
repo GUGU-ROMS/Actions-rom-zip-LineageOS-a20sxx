@@ -27,7 +27,7 @@ jobs:
         libssl-dev libelf-dev \
         device-tree-compiler \
         python3 python3-pip \
-        cpio zip unzip
+        cpio zip unzip python2
 
     - name: Clone kernel
       run: |
@@ -62,6 +62,10 @@ jobs:
         find kernel/out -name "*.dtb" -exec cat {} + > output/dtb.img
 
         cp kernel/out/arch/arm64/boot/dtbo.img output/
+
+    - name: Link Python 2 (installed)
+      run: |
+        sudo ln -sf /usr/bin/python2 /usr/bin/python
 
     - name: Create ramdisk
       run: |
