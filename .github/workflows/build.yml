@@ -45,7 +45,7 @@ jobs:
         CONFIG=$(ls arch/arm64/configs | grep -i a20 | head -n1)
 
         make O=out ARCH=arm64 $CONFIG
-
+        export HOSTCFLAGS="-fcommon"
         make -j4 \
         O=out \
         ARCH=arm64 \
