@@ -49,6 +49,7 @@ jobs:
         make -j4 \
         O=out \
         ARCH=arm64 \
+        HOSTCFLAGS="-fcommon" \
         CROSS_COMPILE=aarch64-linux-gnu- \
         Image.gz dtbs
 
