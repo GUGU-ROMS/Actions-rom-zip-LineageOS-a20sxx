@@ -42,7 +42,9 @@ jobs:
 
         mkdir out
 
-        make O=out a20s_defconfig
+        CONFIG=$(ls arch/arm64/configs | grep -i a20 | head -n1)
+
+        make O=out ARCH=arm64 $CONFIG
 
         make -j4 \
         O=out \
