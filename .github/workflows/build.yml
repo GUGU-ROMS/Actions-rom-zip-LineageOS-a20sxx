@@ -1,89 +1,108 @@
-name: Build A20s Full Boot + DTB
+name: A20s Kernel + Boot Builder
 
 on:
   workflow_dispatch:
 
 jobs:
-  build-boot:
+  build:
     runs-on: ubuntu-latest
+
     env:
       DEVICE: a20s
-      DT_LINK: "https://gitgud.io/GUGUGSI/a20sxx-gsi-a207m/-/archive/a20sxx-user-11-RP1A.200720.012-A207FXXU5CWH1-release-keys/a20sxx-gsi-a207m-a20sxx-user-11-RP1A.200720.012-A207FXXU5CWH1-release-keys.tar.gz?ref_type=heads&path=lineage-device-tree"
-      KERNEL_REPO: https://github.com/goldfish07/android_kernel_samsung_a20sxx_old.git
       THREADS: 4
-      OUTPUT_DIR: ~/a20s-lineage/zip/samsung/$DEVICE
 
     steps:
-    - name: Checkout workflow repo
+
+    - name: Checkout
       uses: actions/checkout@v3
 
-    - name: Install build dependencies
+    - name: Install dependencies
       run: |
         sudo apt update
         sudo apt install -y \
-          build-essential gcc-aarch64-linux-gnu g++-aarch64-linux-gnu \
-          zip unzip curl git \
-          openjdk-17-jdk flex bison gperf zlib1g-dev \
-          libncurses-dev libx11-dev libreadline-dev libgl1-mesa-dev \
-          libxml2-utils xsltproc python3 python3-pip \
-          cpio abootimg device-tree-compiler
+        build-essential \
+        gcc-aarch64-linux-gnu \
+        g++-aarch64-linux-gnu \
+        git bc bison flex \
+        libssl-dev libelf-dev \
+        device-tree-compiler \
+        python3 python3-pip \
+        cpio zip unzip
 
-    - name: Download only lineage-device-tree
-      run: |
-        mkdir -p ~/a20s-lineage/lineage-device-tree
-        cd ~/a20s-lineage/lineage-device-tree
-        curl -L "$DT_LINK" | tar -xz --strip-components=3
+        pip3 install mkbootimg
 
-    - name: Clone Kernel C shallow
+    - name: Clone kernel
       run: |
-        mkdir -p ~/a20s-lineage/kernel
-        git clone --depth=1 $KERNEL_REPO ~/a20s-lineage/kernel/$DEVICE
+        git clone --depth=1 https://github.com/goldfish07/android_kernel_samsung_a20sxx_old.git kernel
 
-    - name: Create minimal ramdisk
+    - name: Build kernel
       run: |
-        mkdir -p ~/a20s-lineage/ramdisk_root
-        echo -e "#!/bin/sh\nexit 0" > ~/a20s-lineage/ramdisk_root/init
-        chmod +x ~/a20s-lineage/ramdisk_root/init
-        cd ~/a20s-lineage/ramdisk_root
+        cd kernel
+
+        export ARCH=arm64
+        export CROSS_COMPILE=aarch64-linux-gnu-
+
+        mkdir out
+
+        make O=out a20s_defconfig
+
+        make -j4 \
+        O=out \
+        ARCH=arm64 \
+        CROSS_COMPILE=aarch64-linux-gnu- \
+        Image.gz dtbs dtbo.img
+
+    - name: Collect build files
+      run: |
+        mkdir output
+
+        cp kernel/out/arch/arm64/boot/Image.gz output/
+
+        find kernel/out -name "*.dtb" -exec cat {} + > output/dtb.img
+
+        cp kernel/out/arch/arm64/boot/dtbo.img output/
+
+    - name: Create ramdisk
+      run: |
+        mkdir ramdisk
+
+        echo '#!/system/bin/sh' > ramdisk/init
+        echo 'exit 0' >> ramdisk/init
+
+        chmod +x ramdisk/init
+
+        cd ramdisk
         find . | cpio -o -H newc > ../ramdisk.cpio
-
-    - name: Compile kernel
-      run: |
-        cd ~/a20s-lineage/kernel/$DEVICE
-        make xconfig
-        make O=out ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j$THREADS \
-            Image.gz dtbs
-
-    - name: Generate dtb.img
-      run: |
-        mkdir -p ~/a20s-lineage/out-dtb
-        mkdtimg create ~/a20s-lineage/out-dtb/dtb.img \
-          --page_size 2048 arch/arm64/boot/dts/vendor/samsung/*.dtb
 
     - name: Build boot.img
       run: |
-        KERNEL_IMG=~/a20s-lineage/kernel/$DEVICE/out/arch/arm64/boot/Image.gz
-        mkbootimg --kernel $KERNEL_IMG \
-                  --ramdisk ~/a20s-lineage/ramdisk.cpio \
-                  --dtb ~/a20s-lineage/out-dtb/dtb.img \
-                  --output ~/a20s-lineage/boot.img
+        mkbootimg \
+        --kernel output/Image.gz \
+        --ramdisk ramdisk.cpio \
+        --dtb output/dtb.img \
+        --pagesize 2048 \
+        --base 0x00000000 \
+        --output output/boot.img
 
     - name: Create flashable ZIP
       run: |
-        mkdir -p $OUTPUT_DIR/META-INF/com/google/android
-        cp ~/a20s-lineage/boot.img $OUTPUT_DIR/
-        cp ~/a20s-lineage/out-dtb/dtb.img $OUTPUT_DIR/
-        cat > $OUTPUT_DIR/META-INF/com/google/android/updater-script <<EOF
-        ui_print("Flashing A20s full boot + dtb");
+        mkdir -p flash/META-INF/com/google/android
+
+        cp output/boot.img flash/
+        cp output/dtbo.img flash/
+
+        cat > flash/META-INF/com/google/android/updater-script << 'EOF'
+        ui_print("Flashing A20s Kernel");
         package_extract_file("boot.img", "/dev/block/by-name/boot");
-        package_extract_file("dtb.img", "/dev/block/by-name/dtb");
+        package_extract_file("dtbo.img", "/dev/block/by-name/dtbo");
+        ui_print("Done");
         EOF
-        cd $OUTPUT_DIR
-        zip -r ../A20s_ROM.zip *
-        cd ~/a20s-lineage
+
+        cd flash
+        zip -r ../A20s_kernel_flashable.zip *
 
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
-        name: A20s_Full_ROM
-        path: $OUTPUT_DIR/../A20s_ROM.zip
+        name: A20s_kernel_package
+        path: A20s_kernel_flashable.zip
