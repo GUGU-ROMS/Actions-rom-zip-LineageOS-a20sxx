@@ -29,8 +29,6 @@ jobs:
         python3 python3-pip \
         cpio zip unzip
 
-        pip3 install mkbootimg
-
     - name: Clone kernel
       run: |
         git clone --depth=1 https://github.com/goldfish07/android_kernel_samsung_a20sxx_old.git kernel
@@ -73,7 +71,11 @@ jobs:
 
         cd ramdisk
         find . | cpio -o -H newc > ../ramdisk.cpio
-
+    - name: Install mkbootimg
+      run: |
+        git clone https://android.googlesource.com/platform/system/tools/mkbootimg
+        sudo cp mkbootimg/mkbootimg.py /usr/local/bin/mkbootimg
+        sudo chmod +x /usr/local/bin/mkbootimg
     - name: Build boot.img
       run: |
         mkbootimg \
