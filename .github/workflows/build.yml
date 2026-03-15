@@ -50,7 +50,7 @@ jobs:
         O=out \
         ARCH=arm64 \
         CROSS_COMPILE=aarch64-linux-gnu- \
-        Image.gz dtbs dtbo.img
+        Image.gz dtbs
 
     - name: Collect build files
       run: |
