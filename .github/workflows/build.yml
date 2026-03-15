@@ -31,7 +31,7 @@ jobs:
 
     - name: Clone kernel
       run: |
-        git clone --depth=1 https://github.com/goldfish07/android_kernel_samsung_a20sxx_old.git kernel
+        git clone --depth=1 https://github.com/GUGU-ROMS/android_kernel_samsung_a20sxx_old.git kernel
 
     - name: Build kernel
       run: |
