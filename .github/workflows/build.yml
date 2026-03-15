@@ -47,7 +47,7 @@ jobs:
 
         make O=out ARCH=arm64 $CONFIG
         export HOSTCFLAGS="-fcommon"
-        make -j4 \
+        make -j2 \
         O=out \
         ARCH=arm64 \
         HOSTCFLAGS="-fcommon" \
